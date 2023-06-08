@@ -1,9 +1,17 @@
+import 'dart:async';
+
+import 'package:awesome_snackbar_content/awesome_snackbar_content.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_blue/flutter_blue.dart';
+import 'package:insucare/data/app_variable.dart';
 import 'package:insucare/utils/styles.dart';
 import 'package:insucare/widgets/real_time_chart.dart';
+import 'dart:convert' show utf8;
 
 class PatientHomeScreen extends StatefulWidget {
-  const PatientHomeScreen({super.key});
+  const PatientHomeScreen({super.key, this.device});
+
+  final BluetoothDevice? device;
 
   @override
   State<PatientHomeScreen> createState() => _PatientHomeScreenState();
@@ -20,62 +28,224 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
   );
 
   bool _isActive = true;
+  bool _isLoading = true;
+  bool _isReady = false;
+  bool _isWriting = false;
+
+  GlobalKey<FormState> formKey = GlobalKey<FormState>();
+
   String _status = 'active';
+
+  final String SERVICE_UUID = "4fafc201-1fb5-459e-8fcc-c5c9c331914b";
+  final String CHARACTERISTIC_UUID = "beb5483e-36e1-4688-b7f5-ea07361b26a8";
+  final String CHARACT_INJECT_SUCCESS_UUID =
+      "45f4dfb0-e886-4f48-bd4f-c127b0b8a5f6";
+
+  late TextEditingController bolusController;
+
+  BluetoothCharacteristic? targetCharacteristic;
+
+  Stream<List<int>>? stream;
+
+  Stream<List<int>>? injectStatus;
+
+  @override
+  void initState() {
+    super.initState();
+    bolusController = TextEditingController();
+    _handleTheInitState();
+  }
+
+  @override
+  void dispose() {
+    bolusController.dispose();
+    super.dispose();
+  }
+
+  _handleTheInitState() async {
+    // 1- Connect to device
+    await connectToDevice();
+    // 2- Finsh the Loading
+    setState(() {
+      _isLoading = false;
+    });
+  }
+
+  Future<void> connectToDevice() async {
+    if (device == null) {
+      _Pop();
+      return;
+    }
+
+    Timer(
+      const Duration(seconds: 10),
+      () {
+        disconnectFromDevice();
+        _Pop();
+      },
+    );
+
+    await device.connect();
+
+    setState(() {
+      isConnected = true;
+    });
+
+    discoverServices();
+  }
+
+  disconnectFromDevice() {
+    if (device == null) {
+      _Pop();
+      return;
+    }
+
+    device.disconnect();
+  }
+
+  discoverServices() async {
+    if (device == null) {
+      _Pop();
+      return;
+    }
+
+    List<BluetoothService> services = await device.discoverServices();
+    services.forEach((service) {
+      if (service.uuid.toString() == SERVICE_UUID) {
+        service.characteristics.forEach((characteristic) {
+          if (characteristic.uuid.toString() == CHARACTERISTIC_UUID) {
+            targetCharacteristic = characteristic;
+            writeData('Hello From The Insucare app');
+          } else if (characteristic.uuid.toString() ==
+              CHARACT_INJECT_SUCCESS_UUID) {
+            characteristic.setNotifyValue(!characteristic.isNotifying);
+            injectStatus = characteristic.value;
+            setState(() {
+              _isReady = true;
+            });
+          }
+        });
+      }
+    });
+
+    if (!_isReady) {
+      _Pop();
+    }
+  }
+
+  Future<bool> _onWillPop() async {
+    return await showDialog(
+            context: context,
+            builder: (context) => AlertDialog(
+                  title: const Text('Are you sure?'),
+                  content: const Text(
+                      'Do you want to disconnect device and go back?'),
+                  actions: <Widget>[
+                    ElevatedButton(
+                      onPressed: () => Navigator.of(context).pop(false),
+                      child: const Text('No'),
+                    ),
+                    ElevatedButton(
+                      onPressed: () {
+                        disconnectFromDevice();
+                        Navigator.of(context).pop(true);
+                      },
+                      child: const Text('Yes'),
+                    ),
+                  ],
+                )) ??
+        false;
+  }
+
+  _Pop() {
+    Navigator.of(context).pop(true);
+  }
+
+  String _dataParse(List<int> dataFromDevice) {
+    return utf8.decode(dataFromDevice);
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Stack(
-        children: <Widget>[
-          Container(
-            height: double.infinity,
-            width: double.infinity,
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Color(0xFF73AEF5),
-                  Color(0xFF61A4F1),
-                  Color(0xFF4780E0),
-                  Color(0xFF398AE5),
-                ],
-                stops: [0.1, 0.4, 0.7, 0.9],
+    return WillPopScope(
+      onWillPop: _onWillPop,
+      child: Scaffold(
+        body: Stack(
+          children: <Widget>[
+            Container(
+              height: double.infinity,
+              width: double.infinity,
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Color(0xFF73AEF5),
+                    Color(0xFF61A4F1),
+                    Color(0xFF4780E0),
+                    Color(0xFF398AE5),
+                  ],
+                  stops: [0.1, 0.4, 0.7, 0.9],
+                ),
               ),
             ),
+            // ignore: sized_box_for_whitespace
+            Container(
+              height: double.infinity,
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 25.0,
+                  vertical: 100.0,
+                ),
+                child: _isLoading ? _buildLoadingWidget() : _buildBodyWidget(),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLoadingWidget() {
+    return Center(
+      child: Column(
+        children: const [
+          CircularProgressIndicator(
+            color: Colors.white,
           ),
-          // ignore: sized_box_for_whitespace
-          Container(
-            height: double.infinity,
-            child: SingleChildScrollView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.symmetric(
-                horizontal: 25.0,
-                vertical: 100.0,
-              ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Image.asset(
-                    'assets/images/logo2.png',
-                    height: 100,
-                    width: double.infinity,
-                  ),
-                  const SizedBox(height: 35.0),
-                  _buildActionsSection(),
-                  const SizedBox(height: 30.0),
-                  _buildStatusSection(),
-                  const SizedBox(height: 30.0),
-                  _buildRealTimeSection(),
-                  const SizedBox(height: 30.0),
-                  _buildInsulinDeliverySection(),
-                ],
-              ),
+          SizedBox(height: 15.0),
+          Text(
+            'Waiting ...',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 24.0,
             ),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildBodyWidget() {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Image.asset(
+          'assets/images/logo2.png',
+          height: 100,
+          width: double.infinity,
+        ),
+        const SizedBox(height: 35.0),
+        _buildActionsSection(),
+        const SizedBox(height: 30.0),
+        _buildStatusSection(),
+        const SizedBox(height: 30.0),
+        _buildRealTimeSection(),
+        const SizedBox(height: 30.0),
+        _buildInsulinDeliverySection(),
+      ],
     );
   }
 
@@ -128,27 +298,74 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
           ),
         ),
         width: MediaQuery.of(context).size.width * 0.42,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              'Pump is \n$_status',
-              style: const TextStyle(
-                color: Colors.white,
-                fontFamily: 'OpenSans',
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
+        child: _isReady
+            ? Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: const [
+                  Text(
+                    'Loading ..',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontFamily: 'OpenSans',
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Icon(
+                    Icons.timelapse,
+                    color: Colors.white,
+                    size: 32,
+                  ),
+                ],
+              )
+            : Container(
+                child: StreamBuilder<List<int>>(
+                  stream: stream,
+                  builder: (context, AsyncSnapshot<List<int>> snapshot) {
+                    if (snapshot.hasError) {
+                      return Text('Error: ${snapshot.error}');
+                    }
+                    if (snapshot.connectionState == ConnectionState.active) {
+                      var currentValue = _dataParse(snapshot.data!);
+                      if (currentValue == 'connected') {
+                        setState(() {
+                          _isActive = true;
+                         _status = 'active';
+                        });
+                      }
+                      else{
+                        setState(() {
+                          _isActive = false;
+                         _status = 'not active';
+                        });
+                      }
+                      return Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Pump is \n$_status',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontFamily: 'OpenSans',
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          Icon(
+                            _isActive
+                                ? Icons.pause_circle_outline_rounded
+                                : Icons.play_circle_outline_rounded,
+                            color: Colors.white,
+                            size: 32,
+                          ),
+                        ],
+                      );
+                    } else {
+                      return Text('Error in stream');
+                    }
+                  },
+                ),
               ),
-            ),
-            Icon(
-              _isActive
-                  ? Icons.pause_circle_outline_rounded
-                  : Icons.play_circle_outline_rounded,
-              color: Colors.white,
-              size: 36,
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -156,7 +373,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
   Widget _buildAddBolusWidget() {
     return GestureDetector(
       onTap: () {
-        // ..
+        _openAddBolusDialog();
       },
       child: Container(
         padding: const EdgeInsets.only(
@@ -196,7 +413,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                   style: TextStyle(
                     color: Colors.white,
                     fontFamily: 'OpenSans',
-                    fontSize: 18,
+                    fontSize: 16,
                     fontWeight: FontWeight.bold,
                     height: 1,
                   ),
@@ -206,7 +423,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                   style: TextStyle(
                     color: Colors.white,
                     fontFamily: 'OpenSans',
-                    fontSize: 18,
+                    fontSize: 16,
                     fontWeight: FontWeight.bold,
                     height: 1,
                   ),
@@ -217,7 +434,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                     color: Colors.white,
                     fontFamily: 'OpenSans',
                     fontWeight: FontWeight.bold,
-                    fontSize: 18,
+                    fontSize: 16,
                     height: 1,
                   ),
                 ),
@@ -226,7 +443,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
             const Icon(
               Icons.add_circle_outline_rounded,
               color: Colors.white,
-              size: 36,
+              size: 32,
             ),
           ],
         ),
@@ -383,7 +600,6 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                   fontSize: 16,
                 ),
               ),
-              SizedBox(width: 15.0),
               Text(
                 '2d last',
                 style: TextStyle(
@@ -457,7 +673,6 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                   fontSize: 16,
                 ),
               ),
-              SizedBox(width: 15.0),
               Text(
                 'change',
                 style: TextStyle(
@@ -806,6 +1021,96 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Future _openAddBolusDialog() => showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Add Bolus'),
+          content: Container(
+            height: MediaQuery.of(context).size.height * 0.2,
+            child: Form(
+              key: formKey,
+              child: Column(
+                children: [
+                  TextFormField(
+                    autofocus: true,
+                    keyboardType: TextInputType.number,
+                    validator: (value) {
+                      if (value!.isEmpty) {
+                        return 'Fill the blank';
+                      }
+                    },
+                    decoration: const InputDecoration(
+                      hintText: 'Enter the quantity of bolus',
+                    ),
+                    controller: bolusController,
+                    onFieldSubmitted: (_) => addBolus(),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            _isWriting
+                ? const CircularProgressIndicator()
+                : TextButton(
+                    onPressed: addBolus,
+                    child: const Text('Add'),
+                  ),
+          ],
+        ),
+      );
+
+  void addBolus() async {
+    if (formKey.currentState!.validate()) {
+      if (await writeData(bolusController.text)) {
+        bolusController.clear();
+        Navigator.of(context).pop();
+        _showSuccessMessage(context, 'The Bolus added successfully');
+      } else {
+        _showErrorMessage(context, 'The Bolus does not addedd');
+      }
+    }
+  }
+
+  Future<bool> writeData(String data) async {
+    if (targetCharacteristic == null) {
+      return false;
+    }
+    List<int> bytes = utf8.encode(data);
+    await targetCharacteristic!.write(bytes);
+    return true;
+  }
+
+  _showSuccessMessage(BuildContext context, message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: AwesomeSnackbarContent(
+          title: 'Success',
+          message: message,
+          contentType: ContentType.success,
+        ),
+        elevation: 0,
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: Colors.transparent,
+      ),
+    );
+  }
+
+  _showErrorMessage(BuildContext context, message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: AwesomeSnackbarContent(
+          title: 'Oh Snap!',
+          message: message,
+          contentType: ContentType.failure,
+        ),
+        elevation: 0,
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: Colors.transparent,
       ),
     );
   }

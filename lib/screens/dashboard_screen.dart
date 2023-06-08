@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter_blue/flutter_blue.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:insucare/screens/dashboard/my_profile_screen.dart';
 import 'package:insucare/screens/dashboard/patient_home_screen.dart';
@@ -9,7 +10,9 @@ import 'package:insucare/utils/colors.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class DashboardScreen extends StatefulWidget {
-  const DashboardScreen({super.key});
+  const DashboardScreen({super.key, this.device});
+
+  final BluetoothDevice? device;
 
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();
@@ -18,18 +21,18 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   int currentIndex = 0;
   bool _isLoading = true;
-  var role = {'name': 'Patient'};
+
+  var role;
 
   @override
   void initState() {
-    //_loadDataFromDevice();
+    super.initState();
+    _loadDataFromDevice();
     setState(() {
       _isLoading = false;
     });
-    super.initState();
   }
 
-  // ignore: unused_element
   Future _loadDataFromDevice() async {
     SharedPreferences localStorage = await SharedPreferences.getInstance();
     role = jsonDecode(localStorage.getString('role')!);
@@ -168,16 +171,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
     if (role['name'] == 'User') {
       switch (currentIndex) {
         case 0:
-          return const UserHomeScreen();
+          return UserHomeScreen();
         case 1:
-          return const ProfileScreen();
+          return ProfileScreen();
       }
     } else if (role['name'] == 'Patient') {
       switch (currentIndex) {
         case 0:
-          return const PatientHomeScreen();
+          return PatientHomeScreen(device: widget.device);
         case 1:
-          return const ProfileScreen();
+          return ProfileScreen();
       }
     }
   }

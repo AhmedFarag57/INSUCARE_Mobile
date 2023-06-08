@@ -120,6 +120,23 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
     }
   }
 
+  Future _fakeSubmit(BuildContext context) async {
+    _showLoadingDialog(context);
+    // ...
+    SharedPreferences localStorage = await SharedPreferences.getInstance();
+    var role = {'isUser': 'false'};
+    localStorage.setString('role', json.encode(role));
+    Timer(const Duration(seconds: 2), () async {
+      // go to Signin Screen
+      _goSigninScreen(context);
+      // show success message
+      _showSuccessMessage(
+        context,
+        'You must log back in to update your data',
+      );
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -636,7 +653,8 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
         onPressed: () async {
           // ...
           if (formKey.currentState!.validate()) {
-            _submitInfoApiRequest(context);
+            //_submitInfoApiRequest(context);
+            _fakeSubmit(context);
           }
         },
         child: const Text(

@@ -42,6 +42,7 @@ dependencies:
   http: ^0.13.5
   awesome_snackbar_content: ^0.1.2
   fl_chart: ^0.62.0
+  flutter_blue: ^0.8.0
   
 dev_dependencies:
   flutter_test:

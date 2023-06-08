@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:insucare/screens/auth/signup_screen.dart';
+import 'package:insucare/screens/bluetooth_devices_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:insucare/dialog/loading_dialog.dart';
 import 'package:insucare/network_utils/api.dart';
@@ -73,7 +74,9 @@ class _SigninScreenState extends State<SigninScreen> {
         Navigator.of(context).pop();
 
         // go to the Dashboard Screen
-        _goDashboardScreen(context);
+        // _goDashboardScreen(context);
+        // go to the Bluetooth Devices Screen
+        _goBluetoothDevicesScreen(context);
       } else {
         // Throw exception to handle it
         throw Exception();
@@ -89,8 +92,17 @@ class _SigninScreenState extends State<SigninScreen> {
   Future<void> _fakeLogin(BuildContext context) async {
     // Show the Loading Dialog
     _showLoadingDialog(context);
+    SharedPreferences localStorage = await SharedPreferences.getInstance();
+    var role;
+    var isUser = jsonDecode(localStorage.getString('role')!);
+    if (isUser['isUser'] == 'true') {
+      role = {'name': 'User'};
+    } else {
+      role = {'name': 'Patient'};
+    }
+    localStorage.setString('role', json.encode(role));
     Timer(const Duration(seconds: 3), () {
-      _goDashboardScreen(context);
+      _goBluetoothDevicesScreen(context);
     });
   }
 
@@ -374,6 +386,13 @@ class _SigninScreenState extends State<SigninScreen> {
     Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(builder: (context) {
       return const DashboardScreen();
+    }), (Route<dynamic> route) => false);
+  }
+
+  _goBluetoothDevicesScreen(context) {
+    Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (context) {
+      return const BluetoothDevicesScreen();
     }), (Route<dynamic> route) => false);
   }
 

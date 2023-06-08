@@ -1,6 +1,10 @@
+import 'dart:convert';
+import 'dart:async';
+
+import 'package:insucare/screens/dashboard/basal_bolus_screen.dart';
 import 'package:insucare/screens/onboard/onboarding_screen.dart';
 import 'package:flutter/material.dart';
-import 'dart:async';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -14,15 +18,30 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
+    _setData();
     Timer(
       const Duration(seconds: 3),
+      /*
       () => Navigator.of(context).pushReplacement(
         MaterialPageRoute(
           // ignore: prefer_const_constructors
           builder: (context) => OnboardingScreen(),
         ),
       ),
+      */
+      () => Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          // ignore: prefer_const_constructors
+          builder: (context) => BasalBolusScreen(),
+        ),
+      ),
     );
+  }
+
+  _setData() async {
+    SharedPreferences localStorage = await SharedPreferences.getInstance();
+    var role = {'isUser': 'true'};
+    localStorage.setString('role', json.encode(role));
   }
 
   @override

@@ -230,7 +230,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       ),
       bottomSheet: _currentPage == _numPages - 1
           ? Container(
-              height: 100.0,
+              height: MediaQuery.of(context).size.height * 0.155,
               width: double.infinity,
               color: Colors.white,
               child: GestureDetector(
