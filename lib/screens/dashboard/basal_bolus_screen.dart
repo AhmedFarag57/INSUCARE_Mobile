@@ -10,10 +10,19 @@ class BasalBolusScreen extends StatefulWidget {
 }
 
 class _BasalBolusScreenState extends State<BasalBolusScreen> {
+  final GlobalKey<FormState> formKey = GlobalKey<FormState>();
+
+  TextEditingController carbController = TextEditingController();
+
   int _widgetSelected = 0;
   var carb = 0;
-  var wholeNum = 1;
-  var fractionalNum = 0;
+  var wholeNum = 0;
+  var fractionalNum = 5;
+
+  @override
+  void initState() {
+    super.initState();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -109,8 +118,8 @@ class _BasalBolusScreenState extends State<BasalBolusScreen> {
           borderRadius: BorderRadius.circular(10.0),
           border: _widgetSelected == 0
               ? Border.all(
-                  color: Colors.black54,
-                  width: 3.0,
+                  color: Colors.indigo.shade900,
+                  width: 5.0,
                 )
               : Border.all(color: Colors.transparent),
           color: Colors.white,
@@ -168,8 +177,8 @@ class _BasalBolusScreenState extends State<BasalBolusScreen> {
           borderRadius: BorderRadius.circular(10.0),
           border: _widgetSelected == 1
               ? Border.all(
-                  color: Colors.black54,
-                  width: 3.0,
+                  color: Colors.indigo.shade900,
+                  width: 5.0,
                 )
               : Border.all(color: Colors.transparent),
           color: Colors.white,
@@ -208,6 +217,8 @@ class _BasalBolusScreenState extends State<BasalBolusScreen> {
       ),
     );
   }
+
+  // START OF BASAL CONTENT
 
   Widget _buildBasalContentView(BuildContext context) {
     return Container(
@@ -352,7 +363,7 @@ class _BasalBolusScreenState extends State<BasalBolusScreen> {
           ),
         ),
         const SizedBox(height: 16.0),
-        _buildNoteWidget('The default value = 1.0'),
+        _buildNoteWidget('The default value = 0.5'),
         const SizedBox(height: 8.0),
         _buildNoteWidget('The max value = 2.0'),
       ],
@@ -415,6 +426,10 @@ class _BasalBolusScreenState extends State<BasalBolusScreen> {
     );
   }
 
+  // END OF BASAL CONTENT
+
+  // START OF BOLUS CONTENT
+
   Widget _buildBolusContentView(BuildContext context) {
     return Container(
       width: double.infinity,
@@ -462,70 +477,6 @@ class _BasalBolusScreenState extends State<BasalBolusScreen> {
           ),
         ),
       ],
-    );
-  }
-
-  Widget _buildBoulsAdviceSection() {
-    return Column(
-      children: [
-        Text(
-          'Bouls advice',
-          style: TextStyle(
-            fontFamily: 'OpenSans',
-            fontWeight: FontWeight.bold,
-            color: Colors.grey.shade500,
-            fontSize: 20.0,
-          ),
-        ),
-        const SizedBox(height: 10.0),
-        _buildBoulsAdviceWidget(),
-      ],
-    );
-  }
-
-  Widget _buildInjectBtn() {
-    return GestureDetector(
-      child: Container(
-        height: 50.0,
-        width: MediaQuery.of(context).size.width,
-        decoration: const BoxDecoration(
-          color: Colors.blue,
-          borderRadius: BorderRadius.all(
-            Radius.circular(8.0),
-          ),
-        ),
-        child: const Center(
-          child: Text(
-            'INJECT',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 18.0,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ),
-      ),
-      onTap: () {
-        showDialog(
-          context: context,
-          builder: (BuildContext context) {
-            return CustomDialogBox(
-              title: 'W A R N I N G',
-              descriptions: 'Are you sure to add $carb units of insulin ?',
-              imgUrl: 'assets/images/warning.png',
-              twoAction: true,
-              text1: 'Yes',
-              callback1: () {
-                // ..
-              },
-              text2: 'Cancel',
-              callback2: () {
-                Navigator.of(context).pop();
-              },
-            );
-          },
-        );
-      },
     );
   }
 
@@ -596,6 +547,47 @@ class _BasalBolusScreenState extends State<BasalBolusScreen> {
         fontWeight: FontWeight.bold,
         color: Colors.black,
       ),
+    );
+    /*
+    return Form(
+      key: formKey,
+      child: Container(
+        height: 25.0,
+        child: TextFormField(
+          controller: carbController,
+          validator: (value) {
+            if (value!.isEmpty) {
+              return 'Please Fill Out The Field';
+            } else {
+              return null;
+            }
+          },
+          keyboardType: TextInputType.number,
+          style: const TextStyle(
+            color: Colors.white,
+            fontFamily: 'OpenSans',
+          ),
+        ),
+      ),
+    );
+    */
+  }
+
+  Widget _buildBoulsAdviceSection() {
+    return Column(
+      children: [
+        Text(
+          'Bouls advice',
+          style: TextStyle(
+            fontFamily: 'OpenSans',
+            fontWeight: FontWeight.bold,
+            color: Colors.grey.shade500,
+            fontSize: 20.0,
+          ),
+        ),
+        const SizedBox(height: 10.0),
+        _buildBoulsAdviceWidget(),
+      ],
     );
   }
 
@@ -673,6 +665,7 @@ class _BasalBolusScreenState extends State<BasalBolusScreen> {
               'Details',
               style: TextStyle(
                 fontSize: 16.0,
+                color: Colors.blue,
               ),
             ),
           ),
@@ -680,4 +673,52 @@ class _BasalBolusScreenState extends State<BasalBolusScreen> {
       ),
     );
   }
+
+  Widget _buildInjectBtn() {
+    return GestureDetector(
+      child: Container(
+        height: 50.0,
+        width: MediaQuery.of(context).size.width,
+        decoration: const BoxDecoration(
+          color: Colors.blue,
+          borderRadius: BorderRadius.all(
+            Radius.circular(8.0),
+          ),
+        ),
+        child: const Center(
+          child: Text(
+            'INJECT',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 18.0,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+      ),
+      onTap: () {
+        showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return CustomDialogBox(
+              title: 'W A R N I N G',
+              descriptions: 'Are you sure to add $carb units of insulin ?',
+              imgUrl: 'assets/images/warning.png',
+              twoAction: true,
+              text1: 'Yes',
+              callback1: () {
+                // ..
+              },
+              text2: 'Cancel',
+              callback2: () {
+                Navigator.of(context).pop();
+              },
+            );
+          },
+        );
+      },
+    );
+  }
+
+  // END OF BOLUS CONTENT
 }

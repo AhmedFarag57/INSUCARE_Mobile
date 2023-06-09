@@ -135,29 +135,44 @@ class _ProgramsScreenState extends State<ProgramsScreen> {
   }
 
   Widget _buildPageTitle() {
-    return const Text(
-      'P R O G R A M S',
-      style: TextStyle(
-        color: Colors.white,
-        fontFamily: 'OpenSans',
-        fontWeight: FontWeight.bold,
-        fontSize: 32,
-      ),
+    return Row(
+      children: [
+        GestureDetector(
+          onTap: () {
+            _onWillPop();
+          },
+          child: const Icon(
+            Icons.arrow_back_ios_new_rounded,
+            color: Colors.white,
+            size: 32.0,
+          ),
+        ),
+        const SizedBox(width: 36.0),
+        const Text(
+          'P R O G R A M S',
+          style: TextStyle(
+            color: Colors.white,
+            fontFamily: 'OpenSans',
+            fontWeight: FontWeight.bold,
+            fontSize: 32,
+          ),
+        )
+      ],
     );
   }
 
   Widget _buildCategorysSection() {
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      mainAxisAlignment: MainAxisAlignment.spaceAround,
       children: [
-        _buildCategoryWidget(Icons.work_rounded, 0),
-        _buildCategoryWidget(Icons.sunny_snowing, 1),
-        _buildCategoryWidget(Icons.no_food_rounded, 2),
+        _buildCategoryWidget(Icons.work_rounded, 'Work', 0),
+        _buildCategoryWidget(Icons.sunny_snowing, 'Rest day', 1),
+        _buildCategoryWidget(Icons.no_food_rounded, 'Fasting', 2),
       ],
     );
   }
 
-  Widget _buildCategoryWidget(icon, index) {
+  Widget _buildCategoryWidget(icon, text, index) {
     return GestureDetector(
       onTap: () {
         setState(() {
@@ -165,12 +180,28 @@ class _ProgramsScreenState extends State<ProgramsScreen> {
         });
       },
       child: Container(
-        child: Icon(
-          icon,
-          color: _widgetSelected == index
-              ? Colors.indigoAccent[700]
-              : Colors.indigo[900],
-          size: 48.0,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              icon,
+              color: _widgetSelected == index
+                  ? Colors.indigoAccent[700]
+                  : Colors.indigo[900],
+              size: 48.0,
+            ),
+            const SizedBox(height: 12.0),
+            Text(
+              text,
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: _widgetSelected == index
+                    ? Colors.indigoAccent[700]
+                    : Colors.indigo[900],
+                fontSize: 16.0,
+              ),
+            ),
+          ],
         ),
       ),
     );
